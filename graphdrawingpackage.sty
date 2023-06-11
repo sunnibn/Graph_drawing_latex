@@ -1,0 +1,1139 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{mypackage}[2020/12/25 Example my package]
+
+\RequirePackage{tikz}
+\RequirePackage{luacode}
+\RequirePackage{pgfkeys}
+
+\usetikzlibrary{positioning}
+
+
+
+
+
+%Path
+\begin{luacode*}
+function PathProc(nodeNum,nodeFlag,name, labelT,edgeT)
+	vert = {}
+	for i=1,nodeNum do
+		vert[i] = {}
+		if nodeFlag=='indicate' then
+			vert[i][1] = name..tostring(i)
+		elseif labelT[i] ~= Nil then
+			vert[i][1] = labelT[i]
+		else
+			vert[i][1] = ''
+		end
+	end
+	edge = {}
+	if next(edgeT)==Nil then
+		for i=1,nodeNum-1 do
+			edge[i] = {}
+			edge[i][1] = i
+			edge[i][2] = i+1
+		end
+	else
+		for i=1,#edgeT do
+			edge[i] = {}
+			edge[i][1] = tonumber(edgeT[i][1])
+			edge[i][2] = tonumber(edgeT[i][2])
+		end
+	end
+	return vert,edge
+end
+function PathGraph(nodeNum,nodeFlag, labelT,edgeT, direction, name,nodeStyle,edgeStyle)
+	vert,edge = PathProc(nodeNum,nodeFlag,name, labelT,edgeT)
+	
+	if nodeNum>0 then
+		tex.print{'\\node ['..nodeStyle..'] ('..name..tostring(1)..')  {'..vert[1][1]..'};'}
+		for i=2,#vert do
+			tex.print{'\\node ['..nodeStyle..'] ('..name..i..') ['..direction..'=of '..name..(i-1)..'] {'..vert[i][1]..'};'}
+		end
+		if edgeStyle ~= true then
+			for i=1,#edge do
+				tex.print{'\\draw ['..edgeStyle..'] ('..name..tostring(edge[i][1])..') to ('..name..tostring(edge[i][2])..');'}
+			end
+		end
+	end
+end
+\end{luacode*}
+\pgfkeys{
+	/pathgraph/.is family,
+	/pathgraph,
+	default/.style = {nodename=no, direction=right, vertdistance=1cm,horidistance=1cm, prefix=a,nodestyle={draw,circle},edgestyle={},nodeonly=no,},
+	nodename/.estore in = \nodename,
+	direction/.estore in = \direction,
+	vertdistance/.estore in = \vertdistance,
+	horidistance/.estore in = \horidistance,
+	prefix/.estore in = \nodeprefix,
+	nodestyle/.estore in = \nodestyle,
+	edgestyle/.estore in = \edgestyle,
+	nodeonly/.estore in = \nodeonly,
+}
+\newcommand{\PathGraph}[4][]{
+	\pgfkeys{/pathgraph, default, #1}
+	\directlua{tempedgestyle = [[\luaescapestring{\nodeonly}]]=='' and true or [[\luaescapestring{\edgestyle}]]}
+	\directlua{tempnameflag = [[\luaescapestring{\nodename}]]=='' and 'indicate' or true}
+	\directlua{labelTable = {}}
+	\foreach \element in {#3} {
+		\directlua{table.insert(labelTable, '\element')}
+	}
+	\directlua{tempidx = 1}
+	\directlua{edgeTable = {}}
+	\foreach \element in {#4} {
+		\directlua{table.insert(edgeTable,{})}
+		\foreach \ele in \element {
+			\directlua{table.insert(edgeTable[tempidx],'\ele')}
+		}
+		\directlua{tempidx = tempidx + 1}
+	}
+	\begin{scope}[node distance={\vertdistance} and {\horidistance)}]
+	\directlua{PathGraph(#2,tempnameflag, labelTable,edgeTable, [[\luaescapestring{\direction}]], [[\luaescapestring{\nodeprefix}]], [[\luaescapestring{\nodestyle}]], tempedgestyle)}
+	\end{scope}
+}
+
+
+
+%Cycle
+\begin{luacode*}
+function CycleProc(nodeNum,nodeFlag,name, labelT,edgeT)
+	vert = {}
+	for i=1,nodeNum do
+		vert[i] = {}
+		if nodeFlag=='indicate' then
+			vert[i][1] = name..tostring(i)
+		elseif labelT[i] ~= Nil then
+			vert[i][1] = labelT[i]
+		else
+			vert[i][1] = ''
+		end
+	end
+	edge = {}
+	if next(edgeT)==Nil then
+		for i=1,nodeNum-1 do
+			edge[i] = {}
+			edge[i][1] = i
+			edge[i][2] = i+1
+		end
+		if nodeNum > 2 then
+			edge[nodeNum] = {}
+			edge[nodeNum][1] = nodeNum
+			edge[nodeNum][2] = 1
+		end
+	else
+		for i=1,#edgeT do
+			edge[i] = {}
+			edge[i][1] = tonumber(edgeT[i][1])
+			edge[i][2] = tonumber(edgeT[i][2])
+		end
+	end
+	return vert,edge
+end
+function CycleAlgo(vert,edge, radius,angle)
+	tit = 360/#vert
+	for i=1,#vert do
+		vert[i][2] = radius*math.cos(math.rad(angle+tit*(i-1)))
+		vert[i][3] = radius*math.sin(math.rad(angle+tit*(i-1)))
+	end
+	return vert,edge
+end
+function CycleGraph(nodeNum,nodeFlag, labelT,edgeT, radius,angle, name,nodeStyle,edgeStyle)
+	vert,edge = CycleProc(nodeNum,nodeFlag,name, labelT,edgeT)
+	vert,edge = CycleAlgo(vert,edge, radius,angle)
+	
+	for i=1,#vert do
+		tex.print{'\\node ['..nodeStyle..'] ('..name..i..') at ('..vert[i][2]..','..vert[i][3]..') {'..vert[i][1]..'};'}
+	end
+	if edgeStyle ~= true then
+		for i=1,#edge do
+			tex.print{'\\draw ['..edgeStyle..'] ('..name..tostring(edge[i][1])..') to ('..name..tostring(edge[i][2])..');'}
+		end
+	end
+end
+\end{luacode*}
+\pgfkeys{
+	/cyclegraph/.is family,
+	/cyclegraph,
+	default/.style = {nodename=no, radius=3,startangle=0, prefix=a,nodestyle={draw,circle},edgestyle={},nodeonly=no},
+	nodename/.estore in = \nodenameflag,
+	radius/.estore in = \radius,
+	startangle/.estore in = \startangle,
+	prefix/.estore in = \nodeprefix,
+	nodestyle/.estore in = \nodestyle,
+	edgestyle/.estore in = \edgestyle,
+	nodeonly/.estore in = \nodeonly,
+}
+\newcommand{\CycleGraph}[4][]{
+	\pgfkeys{/cyclegraph, default, #1}
+	\directlua{tempedgestyle = [[\luaescapestring{\nodeonly}]]=='' and true or [[\luaescapestring{\edgestyle}]]}
+	\directlua{tempnameflag = [[\luaescapestring{\nodenameflag}]]=='' and 'indicate' or true}
+	\directlua{labelTable = {}}
+	\foreach \element in {#3} {
+		\directlua{table.insert(labelTable, '\element')}
+	}
+	\directlua{tempidx = 1}
+	\directlua{edgeTable = {}}
+	\foreach \element in {#4} {
+		\directlua{table.insert(edgeTable,{})}
+		\foreach \ele in \element {
+			\directlua{table.insert(edgeTable[tempidx],'\ele')}
+		}
+		\directlua{tempidx = tempidx + 1}
+	}
+	\directlua{CycleGraph(#2,tempnameflag, labelTable,edgeTable, [[\luaescapestring{\radius}]],[[\luaescapestring{\startangle}]], [[\luaescapestring{\nodeprefix}]],[[\luaescapestring{\nodestyle}]],tempedgestyle)}
+}
+
+
+
+%Star
+\begin{luacode*}
+function StarProc(nodeNum,nodeFlag,name, labelT,edgeT)
+	vert = {}
+	for i=1,nodeNum do
+		vert[i] = {}
+		if nodeFlag=='indicate' then
+			vert[i][1] = name..tostring(i)
+		elseif labelT[i] ~= Nil then
+			vert[i][1] = labelT[i]
+		else
+			vert[i][1] = ''
+		end
+	end
+	edge = {}
+	if next(edgeT)==Nil then
+		for i=1,nodeNum-1 do
+			edge[i] = {}
+			edge[i][1] = 1
+			edge[i][2] = i+1
+		end
+	else
+		for i=1,#edgeT do
+			edge[i] = {}
+			edge[i][1] = tonumber(edgeT[i][1])
+			edge[i][2] = tonumber(edgeT[i][2])
+		end
+	end
+	return vert,edge
+end
+function StarAlgo(vert,edge, radius,angle)
+	tit = 360/(#vert-1)
+	if #vert>0 then
+		vert[1][2] = 0
+		vert[1][3] = 0
+	end
+	for i=2,#vert do
+		vert[i][2] = radius*math.cos(math.rad(angle+tit*(i-2)))
+		vert[i][3] = radius*math.sin(math.rad(angle+tit*(i-2)))
+	end
+	return vert,edge
+end
+function StarGraph(nodeNum,nodeFlag, labelT,edgeT, radius,angle, name,nodeStyle,edgeStyle)
+	vert,edge = StarProc(nodeNum,nodeFlag,name, labelT,edgeT)
+	vert,edge = StarAlgo(vert,edge, radius,angle)
+	
+	for i=1,#vert do
+		tex.print{'\\node ['..nodeStyle..'] ('..name..i..') at ('..vert[i][2]..','..vert[i][3]..') {'..vert[i][1]..'};'}
+	end
+	if edgeStyle ~= true then
+		for i=1,#edge do
+			tex.print{'\\draw ['..edgeStyle..'] ('..name..tostring(edge[i][1])..') to ('..name..tostring(edge[i][2])..');'}
+		end
+	end
+end
+\end{luacode*}
+\pgfkeys{
+	/stargraph/.is family,
+	/stargraph,
+	default/.style = {nodename=no,  radius=3,startangle=0, prefix=a,nodestyle={draw,circle},edgestyle={},nodeonly=no},
+	nodename/.estore in = \nodename,
+	radius/.estore in = \radius,
+	startangle/.estore in = \startangle,
+	prefix/.estore in = \nodeprefix,
+	nodestyle/.estore in = \nodestyle,
+	edgestyle/.estore in = \edgestyle,
+	nodeonly/.estore in = \nodeonly,
+}
+\newcommand{\StarGraph}[4][]{
+	\pgfkeys{/stargraph, default, #1}
+	\directlua{tempedgestyle = [[\luaescapestring{\nodeonly}]]=='' and true or [[\luaescapestring{\edgestyle}]]}
+	\directlua{tempnameflag = [[\luaescapestring{\nodename}]]=='' and 'indicate' or true}
+	\directlua{labelTable = {}}
+	\foreach \element in {#3} {
+		\directlua{table.insert(labelTable, '\element')}
+	}
+	\directlua{tempidx = 1}
+	\directlua{edgeTable = {}}
+	\foreach \element in {#4} {
+		\directlua{table.insert(edgeTable,{})}
+		\foreach \ele in \element {
+			\directlua{table.insert(edgeTable[tempidx],'\ele')}
+		}
+		\directlua{tempidx = tempidx + 1}
+	}
+	\directlua{StarGraph(#2,tempnameflag, labelTable,edgeTable, [[\luaescapestring{\radius}]],[[\luaescapestring{\startangle}]], [[\luaescapestring{\nodeprefix}]], [[\luaescapestring{\nodestyle}]], tempedgestyle)}
+}
+
+
+
+%Complete
+\begin{luacode*}
+function CompleteProc(nodeNum)
+	edge = {}
+	idx = 1
+	for i=1,nodeNum do
+		for j=i+1,nodeNum do
+			edge[idx] = {}
+			edge[idx][1] = i
+			edge[idx][2] = j
+			idx = idx + 1
+		end
+	end
+	return edge
+end
+function CompleteEdge(nodeNum, name,edgeStyle)
+	edge = CompleteProc(nodeNum)
+	for i=1,#edge do
+		tex.print{'\\draw ['..edgeStyle..'] ('..name..tostring(edge[i][1])..') to ('..name..tostring(edge[i][2])..');'}
+	end
+end
+\end{luacode*}
+\pgfkeys{
+	/completeedge/.is family,
+	/completeedge,
+	default/.style = {edgestyle={}},
+	edgestyle/.estore in = \edgestyle,
+}
+\newcommand{\CompleteEdge}[3][]{
+	\pgfkeys{/completeedge, default, #1}
+	\directlua{CompleteEdge(#2, [[#3]], [[\luaescapestring{\edgestyle}]])}
+}
+
+
+
+%Grid
+\begin{luacode*}
+function GridProc(row,col,nodeFlag, name, labelT,edgeT)
+	vert = {}
+	idx = 1
+	for i=1,row do
+		for j=1,col do
+			vert[idx] = {}
+			if nodeFlag=='indicate' then
+				vert[idx][1] = name..tostring(idx)
+			elseif labelT[idx] ~= Nil then
+				vert[idx][1] = labelT[idx]
+			else
+				vert[idx][1] = ''
+			end
+			idx = idx + 1
+		end
+	end
+	edge = {}
+	idx = 1
+	if next(edgeT)==Nil then
+		for i=1,row do
+			for j=1,col-1 do
+				edge[idx] = {}
+				edge[idx][1] = (i-1)*col+j
+				edge[idx][2] = (i-1)*col+(j+1)
+				idx = idx + 1
+			end
+		end
+		for i=1,row-1 do
+			for j=1,col do
+				edge[idx] = {}
+				edge[idx][1] = (i-1)*col+j
+				edge[idx][2] = i*col+j
+				idx = idx + 1
+			end
+		end
+	else
+		for i=1,#edgeT do
+			edge[i] = {}
+			edge[i][1] = tonumber(edgeT[i][1])
+			edge[i][2] = tonumber(edgeT[i][2])
+		end
+	end
+	return vert,edge
+end
+function GridAlgo(row,col, vert,edge, vertdis,horidis)
+	idx = 1
+	for i=0,row-1 do
+		for j=0,col-1 do
+			vert[idx][2] = j*horidis
+			vert[idx][3] = i*vertdis
+			idx = idx + 1
+		end
+	end
+	return vert,edge
+end
+function GridGraph(row,col,nodeFlag, labelT,edgeT, vertdis,horidis, name,nodeStyle,edgeStyle)
+	vert,edge = GridProc(row,col,nodeFlag, name, labelT,edgeT)
+	vert,edge = GridAlgo(row,col, vert,edge, vertdis,horidis)
+	
+	for i=1,#vert do
+		tex.print{'\\node ['..nodeStyle..'] ('..name..i..') at ('..vert[i][2]..','..vert[i][3]..') {'..vert[i][1]..'};'}
+	end
+	if edgeStyle ~= true then
+		for i=1,#edge do
+			tex.print{'\\draw ['..edgeStyle..'] ('..name..tostring(edge[i][1])..') to ('..name..tostring(edge[i][2])..');'}
+		end
+	end
+end
+\end{luacode*}
+\pgfkeys{
+	/gridgraph/.is family,
+	/gridgraph,
+	default/.style = {nodename=no, vertdistance=1,horidistance=1, prefix=a,nodestyle={draw,circle},edgestyle={},nodeonly=no},
+	nodename/.estore in = \nodenameflag,
+	vertdistance/.estore in = \vertdistance,
+	horidistance/.estore in = \horidistance,
+	prefix/.estore in = \nodeprefix,
+	nodestyle/.estore in = \nodestyle,
+	edgestyle/.estore in = \edgestyle,
+	nodeonly/.estore in = \nodeonly,
+}
+\newcommand{\GridGraph}[5][]{
+	\pgfkeys{/gridgraph, default, #1}
+	\directlua{tempedgestyle = [[\luaescapestring{\nodeonly}]]=='' and true or [[\luaescapestring{\edgestyle}]]}
+	\directlua{tempnameflag = [[\luaescapestring{\nodenameflag}]]=='' and 'indicate' or true}
+	\directlua{labelTable = {}}
+	\foreach \element in {#4} {
+		\directlua{table.insert(labelTable, '\element')}
+	}
+	\directlua{tempidx = 1}
+	\directlua{edgeTable = {}}
+	\foreach \element in {#5} {
+		\directlua{table.insert(edgeTable,{})}
+		\foreach \ele in \element {
+			\directlua{table.insert(edgeTable[tempidx],'\ele')}
+		}
+		\directlua{tempidx = tempidx + 1}
+	}
+	\directlua{GridGraph(#2,#3,tempnameflag, labelTable,edgeTable, [[\luaescapestring{\vertdistance}]],[[\luaescapestring{\horidistance}]], [[\luaescapestring{\nodeprefix}]],[[\luaescapestring{\nodestyle}]],tempedgestyle)}
+}
+
+
+
+%Bipartite complete
+\begin{luacode*}
+function BipartiteProc(nodeNumA,nameA,nodeNumB,nameB)
+	edge = {}
+	idx = 1
+	for i=1,nodeNumA do
+		for j=1,nodeNumB do
+			edge[idx] = {}
+			edge[idx][1] = i
+			edge[idx][2] = j
+			idx = idx + 1
+		end
+	end
+	return edge
+end
+function BipartiteCompleteEdge(nodeNumA, nameA, nodeNumB, nameB, edgeStyle)
+	edge = BipartiteProc(nodeNumA,nameA,nodeNumB,nameB)
+	for i=1,#edge do
+		tex.print{'\\draw ['..edgeStyle..'] ('..nameA..tostring(edge[i][1])..') to ('..nameB..tostring(edge[i][2])..');'}
+	end
+end
+\end{luacode*}
+\pgfkeys{
+	/bipartiteedge/.is family,
+	/bipartiteedge,
+	default/.style = {edgestyle={}},
+	edgestyle/.estore in = \edgestyle,
+}
+\newcommand{\BipartiteEdge}[5][]{
+	\pgfkeys{/bipartiteedge, default, #1}
+	\directlua{BipartiteCompleteEdge(#2, [[#3]], #4, [[#5]], [[\luaescapestring{\edgestyle}]])}
+}
+\pgfkeys{
+	/bipartitegraph/.is family,
+	/bipartitegraph,
+	default/.style = {prefixA=a,prefixB=b, direction=right, distance=3cm, nodestyle={draw,circle}, edgestyle={}, nodename=no},
+	prefixA/.estore in = \nodeprefix,
+	prefixB/.estore in = \nodeprefixB,
+	direction/.estore in = \direction,
+	distance/.estore in = \distance,
+	nodestyle/.estore in = \nodestyle,
+	edgestyle/.estore in = \edgestyle,
+	nodename/.estore in = \nodename,
+}
+\newcommand{\BipartiteGraph}[5][]{
+	\pgfkeys{/bipartitegraph, default, #1}
+	\directlua{tempnameflag = [[\luaescapestring{\nodename}]]=='' and 'indicate' or true}
+	
+	\directlua{edgeTable = {}}
+	\directlua{labelTable = {}}
+	\foreach \element in {#3} {
+		\directlua{table.insert(labelTable, '\element')}
+	}
+	\begin{scope}[shift={(0,0)}]
+	\directlua{PathGraph(#2,tempnameflag, labelTable,edgeTable, [[\luaescapestring{\direction}]], [[\luaescapestring{\nodeprefix}]],[[\luaescapestring{\nodestyle}]],true)}
+	\end{scope}
+	
+	\directlua{labelTable = {}}
+	\foreach \element in {#5} {
+		\directlua{table.insert(labelTable, '\element')}
+	}
+	\def\distanceXaxis{\directlua{ tex.print{tostring((#2-#4)/2)..'cm'} }}
+	\begin{scope}[shift={(\distanceXaxis,-\distance)}]
+	\directlua{PathGraph(#4,tempnameflag, labelTable,edgeTable, [[\luaescapestring{\direction}]], [[\luaescapestring{\nodeprefixB}]],[[\luaescapestring{\nodestyle}]],true)}
+	\end{scope}
+	
+	\directlua{BipartiteCompleteEdge(#2, [[\luaescapestring{\nodeprefix}]], #4, [[\luaescapestring{\nodeprefixB}]], [[\luaescapestring{\edgestyle}]])}
+}
+
+
+
+%Butterfly graph
+\begin{luacode*}
+function ButterflyGraph(dimension,nodeFlag, labelT, name,nodeStyle,edgeStyle)
+	label = ''
+	idx = 1
+	for i=0, dimension do
+		pos1 = 'right'
+		pos2 = 'below'
+		pos = '['..pos1..'=of '..name..(i-1)..'-'..tostring(1)..']'
+		if i==0 then
+			pos = ''
+		end
+		if nodeFlag=='indicate' then
+			label = name..i..'-'..tostring(1)
+		elseif labelT[idx] ~= Nil then
+			label = labelT[idx]
+			idx = idx + 1
+		else
+			label = ''
+		end
+		tex.print{'\\node ['..nodeStyle..'] ('..name..i..'-'..tostring(1)..') '..pos..' {'..label..'};'}
+		for j=2, 2^dimension do
+			pos = '['..pos2..'=of '..name..i..'-'..(j-1)..']'
+			if nodeFlag=='indicate' then
+				label = name..i..'-'..j
+			elseif labelT[idx] ~= Nil then
+				label = labelT[idx]
+				idx = idx + 1
+			else
+				label = ''
+			end
+			tex.print{'\\node ['..nodeStyle..'] ('..name..i..'-'..j..') '..pos..' {'..label..'};'}
+		end
+	end
+	if edgeStyle ~= true then
+		for i=0, dimension-1 do
+			numinblock = 2^(dimension-i)
+			for j=1, 2^i do
+				for k=1+numinblock*(j-1), numinblock*j do
+					tex.print{'\\draw ['..edgeStyle..'] ('..name..i..'-'..k..') to ('..name..(i+1)..'-'..k..');'}
+					k2 = k
+					average = (1+numinblock*(j-1) + numinblock*j)/2
+					if k > average then
+						k2 = k - numinblock/2
+					else
+						k2 = k + numinblock/2
+					end
+					tex.print{'\\draw ['..edgeStyle..'] ('..name..i..'-'..k..') to ('..name..(i+1)..'-'..k2..');'}
+				end
+			end
+		end
+	end
+end
+\end{luacode*}
+\pgfkeys{
+	/butterflygraph/.is family,
+	/butterflygraph,
+	default/.style = {nodename=no, vertdistance=5mm,horidistance=5mm, prefix=a,nodestyle={draw,circle},edgestyle={->},nodeonly=no},
+	nodename/.estore in = \nodename,
+	vertdistance/.estore in = \vertdistance,
+	horidistance/.estore in = \horidistance,
+	prefix/.estore in = \nodeprefix,
+	nodestyle/.estore in = \nodestyle,
+	edgestyle/.estore in = \edgestyle,
+	nodeonly/.estore in = \nodeonly,
+}
+\newcommand{\ButterflyGraph}[3][]{
+	\pgfkeys{/butterflygraph, default, #1}
+	\directlua{tempedgestyle = [[\luaescapestring{\nodeonly}]]=='' and true or [[\luaescapestring{\edgestyle}]]}
+	\directlua{tempnameflag = [[\luaescapestring{\nodename}]]=='' and 'indicate' or true}
+	\directlua{labelTable = {}}
+	\foreach \element in {#3} {
+		\directlua{table.insert(labelTable, '\element')}
+	}
+	\begin{scope}[node distance={\vertdistance} and {\horidistance)}]
+	\directlua{ButterflyGraph(#2,tempnameflag, labelTable, [[\luaescapestring{\nodeprefix}]], [[\luaescapestring{\nodestyle}]], tempedgestyle)}
+	\end{scope}
+}
+
+
+
+%Hypercube
+\begin{luacode*}
+function HypercubeGraph(dimension,nodeFlag, labelT, vertdis,horidis, name,nodeStyle,edgeStyle)
+	label = ''
+	idx = 1
+	--fibonacci pyramid
+	prev = {}
+	prev[0] = 1
+	prev[1] = 1
+	for layer=1, dimension-1 do
+		fibonacci = {}
+		fibonacci[0] = 1
+		for node=1, layer do
+			fibonacci[node] = prev[node-1] + prev[node]
+		end
+		fibonacci[layer+1] = 1
+		prev = fibonacci
+	end
+	
+	--initalnode
+	prevlayer = {}
+	fstval = ''
+	for i=1,dimension do fstval = fstval..'0' end
+	prevlayer[0] = fstval
+	if nodeFlag=='indicate' then
+		label = name..fstval
+	elseif labelT[idx] ~= Nil then
+		label = labelT[idx]
+		idx = idx + 1
+	else
+		label = ''
+	end
+	tex.print{'\\node ['..nodeStyle..'] ('..name..fstval..') at (0,0) {'..label..'};'}
+	
+	nowlayer = {}
+	for layer=1, #fibonacci do
+		nowlayer = {}
+		initi = -(fibonacci[layer]-1)/2
+		xpos = 0
+		for i=dimension, 1, -1 do
+			for x=0, #prevlayer do
+				prevnode = prevlayer[x]
+				if string.sub(prevnode,i,i) == '0' then
+					connto = string.sub(prevnode,1,i-1)..'1'..string.sub(prevnode,i+1,-1)
+					--check adding
+					check = true
+					for k=0, #nowlayer do
+						if nowlayer[k]==connto then
+							check=false
+							break
+						end
+					end
+					if check then
+						nowlayer[xpos] = connto
+						if nodeFlag=='indicate' then
+							label = name..connto
+						elseif labelT[idx] ~= Nil then
+							label = labelT[idx]
+							idx = idx + 1
+						else
+							label = ''
+						end
+						tex.print{'\\node ['..nodeStyle..'] ('..name..connto..') at ('..((initi+xpos)*horidis)..','..(layer*vertdis)..') {'..label..'};'}
+						xpos = xpos+1
+					end
+					--connect
+					tex.print{'\\draw ['..edgeStyle..'] ('..name..prevnode..') to ('..name..connto..');'}
+				end
+			end
+		end
+		prevlayer = nowlayer
+	end
+end
+\end{luacode*}
+\pgfkeys{
+	/hypercubegraph/.is family,
+	/hypercubegraph,
+	default/.style = {nodename=no, vertdistance=1,horidistance=1, prefix=a,nodestyle={draw,circle},edgestyle={},nodeonly=no},
+	nodename/.estore in = \nodename,
+	vertdistance/.estore in = \vertdistance,
+	horidistance/.estore in = \horidistance,
+	prefix/.estore in = \nodeprefix,
+	nodestyle/.estore in = \nodestyle,
+	edgestyle/.estore in = \edgestyle,
+	nodeonly/.estore in = \nodeonly,
+}
+\newcommand{\Hypercube}[3][]{
+	\pgfkeys{/hypercubegraph, default, #1}
+	\directlua{tempedgestyle = [[\luaescapestring{\nodeonly}]]=='' and true or [[\luaescapestring{\edgestyle}]]}
+	\directlua{tempnameflag = [[\luaescapestring{\nodename}]]=='' and 'indicate' or true}
+	\directlua{labelTable = {}}
+	\foreach \element in {#3} {
+		\directlua{table.insert(labelTable, '\element')}
+	}
+	\directlua{HypercubeGraph(#2,tempnameflag, labelTable, [[\luaescapestring{\vertdistance}]],[[\luaescapestring{\horidistance}]], [[\luaescapestring{\nodeprefix}]], [[\luaescapestring{\nodestyle}]], [[\luaescapestring{\edgestyle}]])}
+}
+
+
+
+%General graph
+\begin{luacode*}
+function GeneralProc(startG,nodeFlag,radius, nodeT,labelT,edgeT, name)
+	vert = Nil
+	edge = Nil
+	if startG=='cycle' then
+		vert,edge = CycleProc(#nodeT,nodeFlag,name, labelT,{})
+		vert,edge = CycleAlgo(vert,edge, radius,0)
+	elseif startG=='star' then
+		vert,edge = StarProc(#nodeT,nodeFlag,name, labelT,{})
+		vert,edge = StarAlgo(vert,edge, radius,0)
+	else
+		error('unavailable starting graph layout')
+	end
+	--preprocess
+	edge = {}
+	for i=1,#edgeT do
+		edge[i] = {}
+		for j=1,#nodeT do
+			if edgeT[i][1]==nodeT[j] then
+				edge[i][1] = j
+			end
+			if edgeT[i][2]==nodeT[j] then
+				edge[i][2] = j
+			end
+		end
+	end
+	return vert,edge
+end
+function GeneralAlgo(vert,edge, Lzero,K,e)
+	math.inf = 1/0
+	--compute d
+	d = {}
+	maxd = 0
+	for i=1,#vert do
+		d[i] = {}
+		for j=1,#vert do
+			d[i][j] = math.inf
+			if i == j then
+				d[i][j] = 0
+			end
+		end
+	end
+	for i=1,#edge do
+		d[edge[i][1]][edge[i][2]] = 1
+		d[edge[i][2]][edge[i][1]] = 1
+	end
+	for i=1,#vert do
+		for j=1,#vert do
+			if d[j][i] < math.inf then
+				for k=1,#vert do
+					if d[i][k] < math.inf then
+						s = d[j][i] +d[i][k]
+						if s < d[j][k] then
+							d[j][k] = s
+						end
+					end
+				end
+			end
+		end
+	end
+	for i=1,#vert do
+		for j=i,#vert do
+			if maxd < d[i][j] then
+				maxd = d[i][j]
+			end
+		end
+	end
+	--compute l
+	--Lzero
+	L = Lzero / maxd
+	l = {}
+	for i=1,#vert do
+		l[i] = {}
+		for j=1,#vert do
+			l[i][j] = L*d[i][j]
+		end
+	end
+	--compute k
+	--K
+	k = {}
+	for i=1,#vert do
+		k[i] = {}
+		for j=1,#vert do
+			k[i][j] = K / (d[i][j]*d[i][j])
+		end
+	end
+	--set position
+	p = {}
+	for i=1,#vert do
+		p[i] = {}
+		p[i][1] = vert[i][2]
+		p[i][2] = vert[i][3]
+	end
+	
+	--loop
+	--initialize m
+	m = nil
+	maxD = 0
+	--e
+	for i=1,#vert do
+		D = GeneralgetD(i, vert,p,k,l)
+		if maxD < D then
+			maxD = D
+			m = i
+		end
+	end
+	while maxD > e do
+		--move position of vertex m
+		while maxD > e do
+			--calculate Dx Dy
+			coef1 = 0
+			coef2 = 0
+			coef3 = 0
+			coef4 = 0
+			coef5 = 0
+			coef6 = 0
+			for i=1,#vert do
+				if m ~= i then
+					tempx = p[i][1]-p[m][1]
+					tempy = p[i][2]-p[m][2]
+					tempu = tempx*tempx + tempy*tempy
+					c1 = 1 - l[m][i]*tempy*tempy / tempu^(3/2)
+					c2 = l[m][i]*tempx*tempy / tempu^(3/2)
+					c3 = l[m][i]*tempx*tempy / tempu^(3/2)
+					c4 = 1 - l[m][i]*tempx*tempx / tempu^(3/2)
+					c5 = tempx - l[m][i]*tempx / tempu^(1/2)
+					c6 = tempy - l[m][i]*tempy / tempu^(1/2)
+					coef1 = coef1 + k[m][i]*c1
+					coef2 = coef2 + k[m][i]*c2
+					coef3 = coef3 + k[m][i]*c3
+					coef4 = coef4 + k[m][i]*c4
+					coef5 = coef5 + k[m][i]*c5
+					coef6 = coef6 + k[m][i]*c6
+				end
+			end
+			dx = (coef4*coef5-coef2*coef6) / (coef1*coef4-coef2*coef3)
+			dy = (-coef3*coef5+coef1*coef6) / (coef1*coef4-coef2*coef3)
+			p[m][1] = p[m][1] + dx
+			p[m][2] = p[m][2] + dy
+			maxD = GeneralgetD(m, vert,p,k,l)
+		end
+		--set m
+		m = nil
+		maxD = 0
+		for i=1,#vert do
+			D = GeneralgetD(i, vert,p,k,l)
+			if maxD < D then
+				maxD = D
+				m = i
+			end
+		end
+	end
+	
+	--last process
+	for i=1,#vert do
+		vert[i][2] = p[i][1]
+		vert[i][3] = p[i][2]
+	end
+	return vert,edge
+end
+function GeneralgetD(m, vert,p,k,l)
+	pdxE = 0
+	pdyE = 0
+	for i=1,#vert do
+		if m ~= i then
+			tempx = p[i][1]-p[m][1]
+			tempy = p[i][2]-p[m][2]
+			pdxE = pdxE + k[m][i]*(tempx - l[m][i]*tempx/math.sqrt(tempx*tempx + tempy*tempy))
+			pdyE = pdyE + k[m][i]*(tempy - l[m][i]*tempy/math.sqrt(tempx*tempx + tempy*tempy))
+		end
+	end
+	D = math.sqrt(pdxE*pdxE + pdyE*pdyE)
+	return D
+end
+function GeneralGraph(startG,nodeFlag,radius, nodeT,labelT,edgeT, Lzero,K,e, name,nodeStyle,edgeStyle)
+	vert,edge = GeneralProc(startG,nodeFlag,radius, nodeT,labelT,edgeT, name)
+	if Lzero=='default' then
+		Lzero = 2*math.ceil(math.sqrt(#vert))
+	else
+		LZero = tonumber(Lzero)
+	end
+	K = tonumber(K)
+	e = tonumber(e)
+	vert,edge = GeneralAlgo(vert,edge, Lzero,K,e)
+	
+	for i=1,#vert do
+		tex.print{'\\node ['..nodeStyle..'] ('..name..i..') at ('..vert[i][2]..','..vert[i][3]..') {'..vert[i][1]..'};'}
+	end
+	if edgeStyle ~= true then
+		for i=1,#edge do
+			tex.print{'\\draw ['..edgeStyle..'] ('..name..tostring(edge[i][1])..') to ('..name..tostring(edge[i][2])..');'}
+		end
+	end
+end
+\end{luacode*}
+\pgfkeys{
+	/generalgraph/.is family,
+	/generalgraph,
+	default/.style = {startlayout=cycle,nodename=no,radius=3, L=default,e=0.001,K=1, prefix=a,nodestyle={draw,circle},edgestyle={},nodeonly=no},
+	startlayout/.estore in = \srtlayout,
+	nodename/.estore in = \nodename,
+	radius/.estore in = \radius,
+	L/.estore in = \Lvalue,
+	e/.estore in = \evalue,
+	K/.estore in = \Kvalue,
+	prefix/.estore in = \nodeprefix,
+	nodestyle/.estore in = \nodestyle,
+	edgestyle/.estore in = \edgestyle,
+	nodeonly/.estore in = \nodeonly,
+}
+\newcommand{\GeneralGraph}[4][]{
+	\pgfkeys{/generalgraph, default, #1}
+	\directlua{tempedgestyle = [[\luaescapestring{\nodeonly}]]=='' and true or [[\luaescapestring{\edgestyle}]]}
+	\directlua{tempnameflag = [[\luaescapestring{\nodename}]]=='' and 'indicate' or true}
+	\directlua{nodeTable = {}}
+	\directlua{labelTable= {}}
+	\directlua{edgeTable = {}}
+	\foreach \element in {#2} {
+		\directlua{table.insert(nodeTable, '\element')}
+	}
+	\foreach \element in {#3} {
+		\directlua{table.insert(labelTable, '\element')}
+	}
+	\directlua{tempidx = 1}
+	\foreach \element in {#4} {
+		\directlua{table.insert(edgeTable,{})}
+		\foreach \ele in \element {
+			\directlua{table.insert(edgeTable[tempidx],'\ele')}
+		}
+		\directlua{tempidx = tempidx + 1}
+	}
+	\directlua{GeneralGraph([[\luaescapestring{\srtlayout}]],tempnameflag,[[\luaescapestring{\radius}]], nodeTable,labelTable,edgeTable, [[\luaescapestring{\Lvalue}]],[[\luaescapestring{\Kvalue}]],[[\luaescapestring{\evalue}]], [[\luaescapestring{\nodeprefix}]],[[\luaescapestring{\nodestyle}]],tempedgestyle)}
+}
+
+
+
+%Spectral graph
+\begin{luacode*}
+function spect_make_symmetric(adj_matrix)
+	for i=1,#adj_matrix do
+		for j=i+1,#adj_matrix[i] do
+			adj_matrix[i][j] = adj_matrix[i][j]+adj_matrix[j][i]
+			adj_matrix[j][i] = adj_matrix[i][j]+adj_matrix[j][i]
+		end
+	end
+	return adj_matrix
+end
+function spect_compute_laplacian(adj_matrix, node_weights)
+	n = #adj_matrix
+	m = #adj_matrix[1]
+	if (n ~= m) or (n ~= #node_weights) then
+		error('Error: must be square matrix')
+	end
+	--apply weights
+	for i=1,n do
+		for j=1,m do
+			adj_matrix[i][j] = adj_matrix[i][j] * math.sqrt(node_weights[i][j]*node_weights[j][i])
+		end
+	end
+	--deg
+	deg = {}
+	for i=1,n do
+		vec = 0
+		for j=1,n do
+			vec = vec + adj_matrix[j][i]
+		end
+		deg[i] = vec - adj_matrix[i][i]
+	end
+	--D
+	D = {}
+	for i=1,n do
+		D[i] = {}
+		for j=1,m do
+			D[i][j] = 0
+			if i == j then
+				D[i][j] = deg[i]
+			end
+		end
+	end
+	--L
+	L = {}
+	for i=1,n do
+		L[i] = {}
+		for j=1,m do
+			if i == j then
+				L[i][j] = deg[i]
+			else
+				L[i][j] = -adj_matrix[i][j]
+			end
+		end
+	end
+	return L,D
+end
+function spect_layoutt(adj_matrix, node_weights)
+	if node_weights == nil then
+		node_weights = {}
+		for i=1,#adj_matrix do
+			node_weights[i] = {}
+			for j=1,#adj_matrix[1] do
+				node_weights[i][j] = 1
+			end
+		end
+	end
+	adj_matrix = spect_make_symmetric(adj_matrix)
+	L,D = spect_compute_laplacian(adj_matrix, node_weights)
+	return L,D
+end
+function spect_layoutt2(v)
+	pos = {}
+	for i=1,#v do
+		pos[i] = {}
+		pos[i][1] = v[2][i]
+		pos[i][2] = v[3][i]
+		pos[i][3] = v[4][i]
+	end
+	return pos
+end
+
+--call func
+function SpectralProc(nodeFlag, nodeT,labelT,edgeT, name)
+	vert = {}
+	for i=1,#nodeT do
+		vert[i] = {}
+		if nodeFlag=='indicate' then
+			vert[i][1] = name..tostring(i)
+		elseif labelT[i] ~= Nil then
+			vert[i][1] = labelT[i]
+		else
+			vert[i][1] = ''
+		end
+	end
+	edge = {}
+	for i=1,#edgeT do
+		edge[i] = {}
+		for j=1,#nodeT do
+			if edgeT[i][1]==nodeT[j] then
+				edge[i][1] = j
+			end
+			if edgeT[i][2]==nodeT[j] then
+				edge[i][2] = j
+			end
+		end
+	end
+	return vert,edge
+end
+function SpectralAlgo(vert,edge, viewaxis,scale)
+	adj_matrix = {}
+	for i=1,#vert do
+		adj_matrix[i] = {}
+		for j=1,#vert do
+			adj_matrix[i][j] = 0
+		end
+	end
+	for i=1,#edge do
+		adj_matrix[edge[i][1]][edge[i][2]] = 1
+	end
+	
+	node_weights = nil
+	Lres,Dres = spect_layoutt(adj_matrix, node_weights)
+	io.popen('g++ -o outspectral spectralcppcode.cpp')
+	--execute
+	execmd = 'outspectral '
+	execmd = execmd..tostring(#Lres)
+	for i=1,#Lres do
+		for j=1,#Lres[1] do
+			execmd = execmd..' '
+			execmd = execmd..tostring(Lres[i][j])
+		end
+	end
+	execmd = execmd..' '..tostring(#Dres)
+	for i=1,#Dres do
+		for j=1,#Dres do
+			execmd = execmd..' '
+			execmd = execmd..tostring(Dres[i][j])
+		end
+	end
+	file = assert(io.popen(execmd))
+	output = file:read('*all')
+	splitout = {}
+	idx = 1
+	for i=1,#output do
+		if string.sub(output,i,i) == ' ' then
+			temp = string.sub(output,idx,i-1)
+			table.insert(splitout, tonumber(temp))
+			idx = i+1
+		end
+	end
+	file:close()
+	idx = 1
+	V = {}
+	for i=1,#vert do
+		V[i] = {}
+		for j=1,#vert do
+			V[i][j] = splitout[idx]
+			idx = idx+1
+		end
+	end
+	
+	pos = spect_layoutt2(V)
+	--pick axis
+	a=0
+	b=0
+	if viewaxis=='x' then
+		a=2
+		b=3
+	elseif viewaxis=='y' then
+		a=1
+		b=3
+	else
+		a=1
+		b=2
+	end	
+	--last process
+	for i=1,#vert do
+		vert[i][2] = pos[i][a]*tonumber(scale)
+		vert[i][3] = pos[i][b]*tonumber(scale)
+	end
+	return vert,edge
+end
+function SpectralGraph(nodeFlag,viewaxis,scale, nodeT,labelT,edgeT, name,nodeStyle,edgeStyle)
+	vert,edge = SpectralProc(nodeFlag, nodeT,labelT,edgeT, name)
+	vert,edge = SpectralAlgo(vert,edge, viewaxis,scale)
+	
+	for i=1,#vert do
+		tex.print{'\\node ['..nodeStyle..'] ('..name..i..') at ('..vert[i][2]..','..vert[i][3]..') {'..vert[i][1]..'};'}
+	end
+	if edgeStyle ~= true then
+		for i=1,#edge do
+			tex.print{'\\draw ['..edgeStyle..'] ('..name..tostring(edge[i][1])..') to ('..name..tostring(edge[i][2])..');'}
+		end
+	end
+end
+\end{luacode*}
+\pgfkeys{
+	/spectralgraph/.is family,
+	/spectralgraph,
+	default/.style = {nodename=no, viewaxis=x, scale=10, prefix=a,nodestyle={draw,circle},edgestyle={}, nodeonly=no},
+	nodename/.estore in = \nodename,
+	viewaxis/.estore in = \viewaxis,
+	scale/.estore in = \distancescale,
+	prefix/.estore in = \nodeprefix,
+	nodestyle/.estore in = \nodestyle,
+	edgestyle/.estore in = \edgestyle,
+	nodeonly/.estore in = \nodeonly,
+}
+\newcommand{\SpectralGraph}[4][]{
+	\pgfkeys{/spectralgraph, default, #1}
+	\directlua{tempedgestyle = [[\luaescapestring{\nodeonly}]]=='' and true or [[\luaescapestring{\edgestyle}]]}
+	\directlua{tempnameflag = [[\luaescapestring{\nodename}]]=='' and 'indicate' or true}
+	\directlua{nodeTable = {}}
+	\directlua{labelTable= {}}
+	\directlua{edgeTable = {}}
+	\foreach \element in {#2} {
+		\directlua{table.insert(nodeTable, '\element')}
+	}
+	\foreach \element in {#3} {
+		\directlua{table.insert(labelTable, '\element')}
+	}
+	\directlua{tempidx = 1}
+	\foreach \element in {#4} {
+		\directlua{table.insert(edgeTable,{})}
+		\foreach \ele in \element {
+			\directlua{table.insert(edgeTable[tempidx],'\ele')}
+		}
+		\directlua{tempidx = tempidx + 1}
+	}
+	\directlua{SpectralGraph(tempnameflag,[[\luaescapestring{\viewaxis}]],[[\luaescapestring{\distancescale}]], nodeTable,labelTable,edgeTable, [[\luaescapestring{\nodeprefix}]],[[\luaescapestring{\nodestyle}]],tempedgestyle)}
+}
+
+

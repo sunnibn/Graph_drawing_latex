@@ -1,0 +1,214 @@
+% a demo.tex file where you show some examples, not just the commands as in the manual but a document that the user can just compile and use as template for their own stuff.
+
+\documentclass[12pt,a4paper]{article}
+\usepackage{tikz}
+\usepackage{graphdrawingpackage}
+
+\begin{document}
+
+
+
+\section{Path graphs}
+\begin{tikzpicture}
+\PathGraph{5}{}{}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\PathGraph{5}{a,b,c}{{2,3},{3,4}}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\PathGraph[nodeonly, nodename]{5}{a,b,c}{{2,3},{3,4}}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\PathGraph[direction=above right, vertdistance=3mm, horidistance=1cm]{5}{a,b,,d}{{2,3},{3,4}}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\PathGraph[nodestyle={draw,rectangle}, edgestyle={blue,very thick}]{5}{a,b,c}{{2,3},{3,4}}
+\end{tikzpicture}
+
+
+
+\begin{tikzpicture}
+\CycleGraph[radius=2]{6}{}{}
+\StarGraph[prefix=b,startangle=30,nodestyle={fill,blue}]{7}{}{}
+\end{tikzpicture}
+
+
+
+\section{Cycle graphs}
+\begin{tikzpicture}
+\CycleGraph{8}{}{}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\CycleGraph[nodename,nodeonly,prefix=k]{8}{}{}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\CycleGraph[radius=2]{8}{one}{{1,2},{1,3},{1,4}}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\CycleGraph[radius=2,startangle=90]{8}{one}{{1,2},{1,3},{1,4}}
+\end{tikzpicture}
+
+
+
+\section{Star graphs}
+\begin{tikzpicture}
+\StarGraph{8}{}{}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\StarGraph[radius=1.5]{8}{1,2,3,4,5,6,7,8}{}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\StarGraph[radius=1.5,nodename,nodeonly]{8}{1,2,3,4,5,6,7,8}{}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\StarGraph[radius=1.5,startangle=90]{8}{1,2,3,4,5,6,7,8}{}
+\end{tikzpicture}
+
+
+
+\section{Grid graphs}
+\begin{tikzpicture}
+\GridGraph{3}{5}{}{}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\GridGraph[vertdistance=0.5,horidistance=0.5,nodeonly]{3}{5}{}{}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\GridGraph{3}{5}{1,2,3,4,5,6}{{1,7}}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\GridGraph[nodename]{3}{5}{1,2,3,4,5,6}{{1,7}}
+\end{tikzpicture}
+
+
+
+\section{Complete edge}
+\begin{tikzpicture}
+\CycleGraph[prefix=m,nodename,nodeonly]{8}{}{}
+\CompleteEdge{8}{m}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\StarGraph[prefix=k,nodeonly]{8}{}{}
+\CompleteEdge{8}{k}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\GridGraph[prefix=t,nodeonly]{4}{4}{}{}
+\CompleteEdge{16}{t}
+\end{tikzpicture}
+
+
+
+\section{Bipartite edge}
+\begin{tikzpicture}
+	\PathGraph[prefix=a,nodeonly]{4}{}{}
+	\begin{scope}[shift={(0,-3)}]
+	\PathGraph[prefix=b,nodeonly]{2}{}{}
+	\end{scope}
+	\BipartiteEdge{4}{a}{2}{b}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+	\CycleGraph[prefix=a,nodeonly]{6}{}{}
+	\StarGraph[prefix=b,nodeonly,startangle=30,nodestyle={fill,blue}]{7}{}{}
+	\BipartiteEdge{6}{a}{7}{b}
+\end{tikzpicture}
+
+
+
+\section{Bipartite graph}
+\begin{tikzpicture}
+\BipartiteGraph{2}{a,b}{5}{A,B,C}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\BipartiteGraph[prefixA=p,prefixB=q,nodename]{4}{}{4}{}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\BipartiteGraph[distance=1cm]{3}{}{3}{}
+\end{tikzpicture}
+
+
+
+\section{Butterfly graph}
+\begin{tikzpicture}
+\ButterflyGraph{2}{}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\ButterflyGraph[horidistance=5mm,vertdistance=1mm]{3}{,,,4,,,,8}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\ButterflyGraph[nodename,edgestyle={}]{2}{}
+\end{tikzpicture}
+
+
+
+\section{Hypercube}
+\begin{tikzpicture}
+\Hypercube{4}{}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\Hypercube[vertdistance=1,horidistance=0.7]{5}{a,b,c}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\Hypercube[nodename,nodeonly,nodestyle={draw,rectangle}]{3}{}
+\end{tikzpicture}
+
+
+
+\section{General graphs}
+\begin{tikzpicture}
+\GeneralGraph{5,3,4,2,1}{a,b,c}{{1,3},{2,3},{2,5},{4,5}}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\GeneralGraph[startlayout=star,radius=2]{5,3,4,2,1}{a,b,c}{{1,3},{2,3},{2,5},{4,5}}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\GeneralGraph[L=4,e=0.00001,K=1]{5,3,4,2,1}{a,b,c}{{1,3},{2,3},{2,5},{4,5}}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+\GeneralGraph	{1,2,3,4,5,6,7,8,9,10,11,12}
+					{a,b,c,d,e,f,g,h,i, j, k, l}
+					{{1,2},{1,12},{2,3},{2,4},{2,5},{3,5},{4,1},{6,7},{7,8},{8,5},{9,11},{10,11},{12,10},{12,8},{12,5},{9,5}}
+\end{tikzpicture}
+
+
+
+\section{Spectral graphs} 
+This section needs c++ compilation!
+\begin{tikzpicture}
+%\SpectralGraph[viewaxis=z]{5,3,4,2,1}{a,b,c}{{1,3},{2,3},{2,5},{4,5}}
+\end{tikzpicture}
+\\
+\begin{tikzpicture}
+%\SpectralGraph[scale=5]	{1,2,3,4,5,6,7,8,9,10,11,12}
+					%{a,b,c,d,e,f,g,h,i, j, k, l}
+					%{{1,2},{1,12},{2,3},{2,4},{2,5},{3,5},{4,1},{6,7},{7,8},{8,5},{9,11},{10,11},{12,10},{12,8},{12,5},{9,5}}
+\end{tikzpicture}
+
+
+
+
+\end{document}
